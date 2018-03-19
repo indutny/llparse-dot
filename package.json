@@ -1,6 +1,6 @@
 {
   "name": "llparse-dot",
-  "version": "1.0.0",
+  "version": "1.0.0-beta0",
   "description": "Generate Graphviz dot file from llparse graph",
   "main": "lib/dot.js",
   "files": [
