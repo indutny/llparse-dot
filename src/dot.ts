@@ -27,8 +27,7 @@ export class Dot {
     let res = '';
 
     res += 'digraph {\n';
-    res += '  overlap="false"\n';
-    res += '  splines="true"\n';
+    res += '  splines="curved"\n';
     res += '  concentrate="true"\n';
 
     for (const node of this.enumerateNodes(root)) {
@@ -159,7 +158,7 @@ export class Dot {
 
       const color = kind === 'noAdvance' ? COLOR_NO_ADVANCE : COLOR_ADVANCE;
       res += `  "${this.id(node)}" -> "${this.id(target)}" ` +
-        `[label="${labels.join('|')}" color="${color}"];\n`;
+        `[label="${labels.join('|')}" color="${color}" decorate=true];\n`;
     });
 
     return res;
