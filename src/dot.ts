@@ -6,7 +6,7 @@ import Node = apiNode.Node;
 
 type EdgeMap = ReadonlyMap<Node, ReadonlyArray<Edge> >;
 
-type EdgeKind = 'noAdvance' | 'advance' | 'otherwise' | 'invoke';
+type EdgeKind = 'noAdvance' | 'advance';
 
 const COLOR_ADVANCE = 'black';
 const COLOR_NO_ADVANCE = 'blue';
@@ -85,7 +85,10 @@ export class Dot {
 
     const otherwise = node.getOtherwiseEdge();
     if (otherwise !== undefined) {
-      res += this.buildEdge(node, otherwise, 'otherwise');
+      const label = this.buildOtherwiseLabel(node, otherwise);
+      const color = otherwise.noAdvance ? COLOR_NO_ADVANCE : COLOR_ADVANCE;
+      res += `  "${this.id(node)}" -> "${this.id(otherwise.node)}" ` +
+        `[label="${label}" color="${color}"];\n`;
     }
 
     return res;
@@ -109,6 +112,8 @@ export class Dot {
           sequence.push(edge);
         }
       }
+
+      const labels: string[] = [];
 
       // Build ranges
       const ranges: IRange[] = [];
@@ -138,50 +143,42 @@ export class Dot {
       }
 
       for (const range of ranges) {
-        res += this.buildRange(node, range, kind);
+        labels.push(this.buildRangeLabel(node, range));
       }
 
       // Emit the rest of the edges
       for (const edge of sequence) {
-        res += this.buildEdge(node, edge, kind);
+        labels.push(this.buildEdgeLabel(node, edge));
       }
+
       for (const edge of code) {
-        res += this.buildEdge(node, edge, 'invoke');
+        labels.push(this.buildInvokeLabel(node, edge));
       }
+
+      const color = kind === 'noAdvance' ? COLOR_NO_ADVANCE : COLOR_ADVANCE;
+      res += `  "${this.id(node)}" -> "${this.id(target)}" ` +
+        `[label="${labels.join('|')}" color="${color}"];\n`;
     });
 
     return res;
   }
 
-  private buildRange(node: Node, range: IRange, kind: EdgeKind): string {
+  private buildRangeLabel(node: Node, range: IRange): string {
     const start = this.buildChar(range.start);
     const end = this.buildChar(range.end);
-    const label = range.start === range.end ? start : `${start}:${end}`;
-    const color = kind === 'noAdvance' ? COLOR_NO_ADVANCE : COLOR_ADVANCE;
-    return `  "${this.id(node)}" -> ` +
-      `"${this.id(range.node)}" ` +
-      `[label="${label}" color="${color}"];\n`;
+    return range.start === range.end ? start : `${start}:${end}`;
   }
 
-  private buildEdge(node: Node, edge: Edge, kind: EdgeKind): string {
-    let res =  `  "${this.id(node)}" -> ` +
-      `"${this.id(edge.node)}"`;
+  private buildEdgeLabel(node: Node, edge: Edge): string {
+    return `${this.buildBuffer(edge.key as Buffer)}`;
+  }
 
-    let label: string;
-    let color: string;
-    if (kind === 'invoke') {
-      label = `code: ${edge.key as number}`;
-      color = COLOR_INVOKE;
-    } else if (kind === 'otherwise') {
-      label = edge.noAdvance ? 'otherwise' : 'skipTo';
-      color = edge.noAdvance ? COLOR_NO_ADVANCE : COLOR_ADVANCE;
-    } else {
-      label = `${this.buildBuffer(edge.key as Buffer)}`;
-      color = kind === 'noAdvance' ? COLOR_NO_ADVANCE : COLOR_ADVANCE;
-    }
+  private buildInvokeLabel(node: Node, edge: Edge): string {
+    return `code=${edge.key as number}`;
+  }
 
-    res += ` [label="${label}" color="${color}"];\n`;
-    return res;
+  private buildOtherwiseLabel(node: Node, edge: Edge): string {
+    return edge.noAdvance ? 'otherwise' : 'skipTo';
   }
 
   private buildChar(code: number): string {
