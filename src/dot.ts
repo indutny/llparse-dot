@@ -20,15 +20,16 @@ interface IRange {
 }
 
 export class Dot {
+  private readonly idCache: Map<Node, string> = new Map();
+  private readonly ns: Set<string> = new Set();
+
   public build(root: Node): string {
     let res = '';
 
     res += 'digraph {\n';
-    res += 'rankdir="LR"\n';
-    res += 'ranksep="1.0 equally"\n';
-    res += 'overlap="false"\n';
-    res += 'splines="true"\n';
-    res += 'concentrate="true"\n';
+    res += '  overlap="false"\n';
+    res += '  splines="true"\n';
+    res += '  concentrate="true"\n';
 
     for (const node of this.enumerateNodes(root)) {
       res += this.buildNode(node);
@@ -66,7 +67,7 @@ export class Dot {
 
   private buildNode(node: Node): string {
     let res = '';
-    const name = this.escape(node.name);
+    const name = this.escape(this.id(node));
 
     const advance: Map<Node, Edge[]> = new Map();
     const noAdvance: Map<Node, Edge[]> = new Map();
@@ -155,15 +156,16 @@ export class Dot {
   private buildRange(node: Node, range: IRange, kind: EdgeKind): string {
     const start = this.buildChar(range.start);
     const end = this.buildChar(range.end);
+    const label = range.start === range.end ? start : `${start}:${end}`;
     const color = kind === 'noAdvance' ? COLOR_NO_ADVANCE : COLOR_ADVANCE;
-    return `  "${this.escape(node.name)}" -> ` +
-      `"${this.escape(range.node.name)}" ` +
-      `[label="${start}:${end}" color="${color}"];\n`;
+    return `  "${this.id(node)}" -> ` +
+      `"${this.id(range.node)}" ` +
+      `[label="${label}" color="${color}"];\n`;
   }
 
   private buildEdge(node: Node, edge: Edge, kind: EdgeKind): string {
-    let res =  `  "${this.escape(node.name)}" -> ` +
-      `"${this.escape(edge.node.name)}"`;
+    let res =  `  "${this.id(node)}" -> ` +
+      `"${this.id(edge.node)}"`;
 
     let label: string;
     let color: string;
@@ -183,6 +185,16 @@ export class Dot {
   }
 
   private buildChar(code: number): string {
+    if (code === 0x0a) {
+      return this.escape('\'\\n\'');
+    }
+    if (code === 0x0d) {
+      return this.escape('\'\\r\'');
+    }
+    if (code === 0x09) {
+      return this.escape('\'\\t\'');
+    }
+
     if (0x20 <= code && code <= 0x7e) {
       return this.escape(`'${String.fromCharCode(code)}'`);
     }
@@ -196,6 +208,29 @@ export class Dot {
 
   private buildBuffer(buffer: Buffer): string {
     return `'${this.escape(buffer.toString())}'`;
+  }
+
+  private id(node: Node): string {
+    if (this.idCache.has(node)) {
+      return this.idCache.get(node)!;
+    }
+
+    let res = node.name;
+    if (this.ns.has(res)) {
+      let i = 0;
+      for (; i < this.ns.size; i++) {
+        if (!this.ns.has(res + '_' + i)) {
+          break;
+        }
+      }
+
+      res += '_' + i;
+    }
+    this.ns.add(res);
+
+    res = this.escape(res);
+    this.idCache.set(node, res);
+    return res;
   }
 
   private escape(value: string): string {
