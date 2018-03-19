@@ -3,6 +3,7 @@
   "version": "1.0.0-beta0",
   "description": "Generate Graphviz dot file from llparse graph",
   "main": "lib/dot.js",
+  "types": "lib/dot.d.ts",
   "files": [
     "lib",
     "src"
