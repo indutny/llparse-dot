@@ -27,7 +27,6 @@ export class Dot {
     let res = '';
 
     res += 'digraph {\n';
-    res += '  splines="curved"\n';
     res += '  concentrate="true"\n';
 
     for (const node of this.enumerateNodes(root)) {
